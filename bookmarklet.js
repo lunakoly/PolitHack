@@ -4,10 +4,20 @@ javascript:(function(){
 
 		for (let it of qtexts) {
 			const header = it.firstChild;
+			console.log('==================================');
+			console.log('Testing [' + header.innerText + ']');
 
 			for (let task of tasks) {
+				console.log('For [' + task.question + ']');
 				if (task.question == header.innerText) {
-					header.innerHTML += '<span style="border-radius:3px;margin-left:5px;background:#a3c8ff;padding:3px 7px;">' + task.answers.join(', ') + '</span>';
+					console.log('Accepted');
+
+					if (task.answers.length == 0) {
+						header.innerHTML += '<span style="border-radius:3px;margin-left:5px;background:#ffa3a3;padding:3px 7px;">No info(</span>';
+					} else {
+						const color = task.hasMistakes ? "feffa3" : "a3c8ff";
+						header.innerHTML += '<span style="border-radius:3px;margin-left:5px;background:#' + color + ';padding:3px 7px;">' + task.answers.join(', ') + '</span>';
+					}
 				}
 			}
 		}
