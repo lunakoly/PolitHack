@@ -1,8 +1,15 @@
 function getQuestions() {
 	const qtexts = document.getElementsByClassName('qtext')
+	const base = []
+
 	for (let it of qtexts) {
-		console.log(it.firstChild.innerText)
+		base.push({
+			question: it.firstChild.innerText,
+			answers: []
+		})
 	}
+
+	return JSON.stringify(base)
 }
 
 function label(answers) {
