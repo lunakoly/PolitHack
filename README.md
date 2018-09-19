@@ -2,7 +2,7 @@
 > Easy, easy, real talk, think about this, man 
 
 ## Usage
-Open the test and click the **PolitHack** bookmarklet and you'll be presented with the answers of the question)
+Open the test and click the **PolitHack** bookmarklet and you'll be presented with the answers for the question)
 
 ## Installation
 1. Open *bookmarklet.js* and copy the whole file contents. 
