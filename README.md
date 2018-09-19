@@ -6,7 +6,7 @@ Open the test and click the **PolitHack** bookmarklet and you'll be presented wi
 
 ## Installation
 1. Open *bookmarklet.js* and copy the whole file contents. 
-1. Paste them instead of the url of a bookmerklet. 
+1. Paste them instead of the url of a bookmark. 
 1. Done
 
 ## Debug access
