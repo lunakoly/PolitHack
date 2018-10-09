@@ -67,8 +67,7 @@ function mergeTasks(tasksTo, tasksFrom) {
 	return tasksTo
 }
 
-function justDoAll(oldSrc) {
-	const old = JSON.parse(oldSrc)
+function justDoAll(old) {
 	const merged = mergeTasks(old, getTasks())
 	console.log(merged)
 	return JSON.stringify(merged)
