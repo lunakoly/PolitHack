@@ -1,26 +1,66 @@
 function getTasks() {
 	return [].slice.call(document.getElementsByClassName('que'))
 		.map(it => {
+			// that's a task where you need to write an answer yourself
+			if (it.getElementsByClassName('qtext').length === 0) {
+				const task = {
+					question: it.getElementsByClassName('formulation')[0].innerText,
+					answers: Array.from(it.getElementsByClassName('subquestion'))
+							.map(it => {
+								if (it.childNodes[1].nodeName === 'SELECT') {
+									const that = it.childNodes[1]
+									return that.childNodes[that.selectedIndex].innerText
+								}
+								return it.childNodes[1].value
+							})
+				}
+
+				if (it.getElementsByClassName('grade')[0].innerText !== 'Баллов: 1,00 из 1,00')
+					task.hasMistakes = true
+				
+				return task
+			}
+
+			// that's common question
 			const task = {
 				question: it.getElementsByClassName('qtext')[0].firstChild.innerText,
 				answers: []
 			}
 
-			const isRadio = it.getElementsByClassName('answer')[0]
-					.firstChild.firstChild.type === 'radio'
+			// table
+			if (it.getElementsByClassName('answer')[0].firstChild.nodeName === 'TBODY') {
+				const answers = Array.from(it.getElementsByClassName('answer')[0].firstChild.childNodes)
+				const feedback = it.getElementsByClassName('specificfeedback')[0]
+						.firstChild.innerText
 
-			const feedback = it.getElementsByClassName('specificfeedback')[0]
-					.firstChild.innerText
+				if (feedback !== 'Ваш ответ верный.')
+					task.hasMistakes = true
 
-			if (feedback !== 'Ваш ответ верный.' && !isRadio)
-				task.hasMistakes = true
+				for (each of answers) {
+					const selection = each.lastChild.childNodes[1].childNodes[each.lastChild.childNodes[1].selectedIndex]
+					task.answers.push(each.firstChild.textContent + ' - ' + selection.textContent)
+				}
 
-			if (!isRadio || feedback === 'Ваш ответ верный.') {
-				const answersContainer = it.getElementsByClassName('answer')[0]
+			// common
+			} else {
+				const isRadio = it.getElementsByClassName('answer')[0]
+						.firstChild.firstChild.type === 'radio'
 
-				for (let each of answersContainer.children)
-					if (each.firstChild.checked)
-						task.answers.push(each.innerText)
+				const feedback = it.getElementsByClassName('specificfeedback')[0]
+						.firstChild.innerText
+
+				if (feedback !== 'Ваш ответ верный.' && !isRadio)
+					task.hasMistakes = true
+
+				if (!isRadio || feedback === 'Ваш ответ верный.') {
+					const answersContainer = it.getElementsByClassName('answer')[0]
+
+					for (let each of answersContainer.children)
+						if (each.firstChild.checked) 
+							task.answers.push(each.innerText)
+				}
+
+				console.log(task)
 			}
 
 			return task
