@@ -1,153 +1,339 @@
-function getTasks() {
-	return [].slice.call(document.getElementsByClassName('que'))
-		.map(it => {
-			// that's a task where you need to write an answer yourself
-			if (it.getElementsByClassName('qtext').length === 0) {
-				const task = {
-					question: it.getElementsByClassName('formulation')[0].innerText,
-					answers: Array.from(it.getElementsByClassName('subquestion'))
-							.map(it => {
-								if (it.childNodes[1].nodeName === 'SELECT') {
-									const that = it.childNodes[1]
-									return that.childNodes[that.selectedIndex].innerText
-								}
-								return it.childNodes[1].value
-							})
-				}
+const PolitHack = (function() {
+	const COLOR = {
+		HAS_MISTAKES: 'feffa3',
+		CORRECT: 'a3c8ff',
+		SERIES: '9bf7bc',
+		WRONG: 'ffa3a3'
+	};
 
-				if (it.getElementsByClassName('grade')[0].innerText !== 'Баллов: 1,00 из 1,00')
-					task.hasMistakes = true
-				
-				return task
-			}
+	function bubble(text, color = COLOR.CORRECT) {
+		return `<span style="border-radius:3px;margin-right:5px;background:#${color};padding:3px 7px;line-height:2em;">${text}</span>`;
+	}
 
-			// that's common question
-			const task = {
-				question: it.getElementsByClassName('qtext')[0].firstChild.innerText,
-				answers: []
-			}
+	function labelHasMistakes(target, text) {
+		target.innerHTML += bubble(text, COLOR.HAS_MISTAKES);
+	}
 
-			// table
-			if (it.getElementsByClassName('answer')[0].firstChild.nodeName === 'TBODY') {
-				const answers = Array.from(it.getElementsByClassName('answer')[0].firstChild.childNodes)
-				const feedback = it.getElementsByClassName('specificfeedback')[0]
-						.firstChild.innerText
+	function labelCorrect(target, text) {
+		target.innerHTML += bubble(text, COLOR.CORRECT);
+	}
 
-				if (feedback !== 'Ваш ответ верный.')
-					task.hasMistakes = true
+	function labelSeries(target, text) {
+		target.innerHTML += bubble(text, COLOR.SERIES);
+	}
 
-				for (each of answers) {
-					const selection = each.lastChild.childNodes[1].childNodes[each.lastChild.childNodes[1].selectedIndex]
-					task.answers.push(each.firstChild.textContent + ' - ' + selection.textContent)
-				}
+	function labelWrong(target, text) {
+		target.innerHTML += bubble(text, COLOR.WRONG);
+	}
 
-			// common
-			} else {
-				const isRadio = it.getElementsByClassName('answer')[0]
-						.firstChild.firstChild.type === 'radio'
+	function labelVariant(target, n) {
+		target.innerHTML += `<p>Вариант ${n}</p>`
+	}
 
-				const feedback = it.getElementsByClassName('specificfeedback')[0]
-						.firstChild.innerText
+	const QUESTION_MASK = /[^а-яА-ЯёЁ0-9]/g;
 
-				if (feedback !== 'Ваш ответ верный.' && !isRadio)
-					task.hasMistakes = true
+	function areEqualQuestions(question1, question2) {
+		return question1.replace(QUESTION_MASK, '') === question2.replace(QUESTION_MASK, '');
+	}
 
-				if (!isRadio || feedback === 'Ваш ответ верный.') {
-					const answersContainer = it.getElementsByClassName('answer')[0]
+	function getTaskBlocks() {
+		return document.getElementsByClassName('que');
+	}
 
-					for (let each of answersContainer.children)
-						if (each.firstChild.checked) 
-							task.answers.push(each.innerText)
-				}
-
-				console.log(task)
-			}
-
-			return task
-		})
-}
-
-function order(task) {
-	if (task.answers.length === 0)
-		return 2
-	if (task.hasMistakes)
-		return 1
-	return 0
-}
-
-function mergeTasks(tasksTo, tasksFrom) {
-	for (let task of tasksFrom) {
-		let found = false
-
-		for (let it = 0; it < tasksTo.length; it++)
-			if (task.question === tasksTo[it].question) {
-				if (tasksTo[it].answers.length === 0 || tasksTo[it].hasMistakes) {
-					if (task.hasMistakes) {	
-						console.log('Manual merge required for:')
-						console.log(task)
-						console.log('and')
-						console.log(tasksTo[it])
-					} else {
-						console.log('Updated: ' + task.question)
-						tasksTo[it] = task
-					}
-				}
-	
-				found = true
-				break
-			}
-
-		if (!found) {
-			console.log('Added: ' + task.question)
-			tasksTo.push(task)
+	function textOf(element) {
+		let text = '';
+		
+		for (let each of element.childNodes) {
+			if (each.nodeName === '#text')
+				text += each.textContent.trim();
+	        if (each.tagName === 'P' || each.tagName === 'A' || each.tagName === 'STRONG')
+				text += textOf(each);
+			if (each.tagName === 'DIV' && !each.classList.contains('ablock'))
+				text += textOf(each);
 		}
+
+		return text + ' ';
 	}
 
-	tasksTo.sort((a, b) => order(a) - order(b))
-	return tasksTo
-}
-
-function justDoAll(old) {
-	const merged = mergeTasks(old, getTasks())
-	console.log(merged)
-	return JSON.stringify(merged)
-}
-
-
-
-function testBoormarklet(src){
-	function label(target, color, text) {
-		target.innerHTML += '<span style="border-radius:3px;margin-left:5px;background:#' + color + ';padding:3px 7px;">' + text + '</span>';
+	function formulationOf(taskBlock) {
+		return textOf(taskBlock.querySelector('.formulation')).trim();
 	}
 
-	function addLabels(tasks) {
-		const qtexts = document.getElementsByClassName('qtext');
+	function headerOf(taskBlock) {
+		return taskBlock.querySelector('.qtext') || taskBlock.querySelector('.formulation');
+	}
 
-		for (let it of qtexts) {
-			const header = it.firstChild;
+	function isAnswerAvailable(task) {
+		return task.answer.length !== 0
+	}
+
+	function labelAll(tasks) {
+		for (let each of getTaskBlocks()) {
+			const question = formulationOf(each);
+			const header = headerOf(each);
 			let found = false;
 
 			for (let task of tasks) {
-				if (task.question == header.innerText) {
-					if (task.answers.length == 0)
-						label(header, 'feffa3', 'No answers (');
-					else if (task.hasMistakes)
-						label(header, 'feffa3', task.answers.join(', '));
-					else
-						label(header, 'a3c8ff', task.answers.join(', '));
+				if (areEqualQuestions(task.question, question)) {
+					if (isAnswerAvailable(task)) {
+						for (let item of task.answer)
+							labelCorrect(header, item);
+
+					} else {
+						for (let n = 1; n <= task.variants.length; n++) {
+							const answers = task.variants[n - 1];
+
+							if (answers.length > 0) {
+								const correctness = answers[answers.length - 1]; 
+								let correctCount = '';
+
+								if (correctness.startsWith('Верных')) {
+									correctCount = ' (' + correctness + ')';
+									answers.pop();
+								}
+
+								labelVariant(header, n + correctCount);
+								for (let item of task.variants[n - 1])
+									labelHasMistakes(header, item);
+							}
+						}
+					}
+
 					found = true;
+					break;
 				}
 			}
 
-			if (!found)
-				label(header, 'ffa3a3', 'No info(')
-		}
+			if (!found) {
+				labelWrong(header, 'No info (');
+			}
+		}		
 	}
 
-	addLabels(JSON.parse(src))
-}
+	const TASK_BLOCK_TYPE = {
+		DROPDOWN: 'Dropdown Task Block',
+		TYPEIN: 'Typein Task Block',
+		LIST: 'List Task Block',
+		AB: 'AB Task Block'
+	};
 
+	function getTaskBlockType(taskBlock) {
+		const qtext = taskBlock.querySelector('.qtext');
 
+		if (!qtext)
+			return TASK_BLOCK_TYPE.TYPEIN;
 
-// BEAUTIFILER:
-// https://jsonlint.com/
+		if (qtext.querySelector('UL'))
+			return TASK_BLOCK_TYPE.AB;
+
+		const answer = taskBlock.querySelector('.answer');
+
+		if (answer.firstElementChild.tagName === 'TBODY')
+			return TASK_BLOCK_TYPE.DROPDOWN;
+
+		const firstRow = answer.firstElementChild;
+
+		if (firstRow.firstElementChild.tagName === 'INPUT')
+			if (firstRow.firstElementChild.type === 'checkbox' ||
+				firstRow.firstElementChild.type === 'radio')
+				return TASK_BLOCK_TYPE.LIST;
+
+		return null;
+	}
+
+	function isCorrect(taskBlock) {
+		return taskBlock.querySelector('.grade').textContent === 'Баллов: 1,00 из 1,00';
+	}
+
+	function getTasks() {
+		const tasks = [];
+
+		for (let it of getTaskBlocks()) {
+			const task = {
+				question: formulationOf(it)
+			};
+
+			const type = getTaskBlockType(it);
+			const answer = [];
+
+			if (type === TASK_BLOCK_TYPE.LIST) {
+				const rows = it.querySelector('.answer').children;
+
+				for (let each of rows)
+					if (each.firstElementChild.checked)
+						answer.push(each.innerText);
+
+			} else if (type === TASK_BLOCK_TYPE.DROPDOWN) {
+				const tbody = it.querySelector('.answer').firstElementChild;
+				const rows = tbody.children;
+
+				for (let each of rows){
+					const text = each.querySelector('.text').innerText;
+					const select = each.querySelector('.select');
+					const value = select.children[select.selectedIndex].innerText;
+					answer.push(text + ' - ' + value);
+				}
+
+			} else if (type === TASK_BLOCK_TYPE.TYPEIN) {
+				const subquestions = it.getElementsByClassName('subquestion');
+
+				for (let sub of subquestions) {
+					const input = sub.children[1];
+
+					if (input.tagName === 'SELECT')
+						answer.push(input.children[input.selectedIndex].innerText);
+					else
+						answer.push(input.value);
+				}
+
+			} else if (type === TASK_BLOCK_TYPE.AB) {
+				const rows = it.querySelector('.answer').children;
+				const qtext = it.querySelector('.qtext');
+				const ul = qtext.querySelector('ul');
+
+				const A = ul.children[0].textContent;
+				const B = ul.children[1].textContent;
+
+				for (let each of rows) {
+					const rowContents = each.children;
+
+					if (rowContents[0].checked) {
+						switch (rowContents[1].textContent) {
+							case 'верно только А':
+								answer.push(A);
+							break;
+
+							case 'верно только Б':
+								answer.push(B);
+							break;
+
+							case 'верны оба суждения':
+								answer.push('верны оба суждения');
+							break;
+
+							default:
+								answer.push('оба суждения неверны');
+						}
+
+						break;
+					}
+				}
+
+			} else {
+				console.log('Unknown type:');
+				console.log(it);
+			}
+
+			if (isCorrect(it)) {
+				task.variants = [];
+				task.answer = answer;
+			} else {
+				task.answer = [];
+				task.variants = [answer];
+
+				const correctness = it.querySelector('.numpartscorrect');
+
+				if (correctness) {
+					const correctCount = correctness.innerText.split(/\s+/).pop();
+					const number = parseInt(correctCount) || -1;
+
+					if (number !== -1)
+						answer.push('Верных ' + number);
+				}
+			}
+
+			tasks.push(task)
+		};
+
+		return tasks
+	}
+
+	function mergeTasks(tasksFrom, tasksTo) {
+		for (let it of tasksFrom) {
+			let found = false;
+
+			for (let that of tasksTo) {
+				if (areEqualQuestions(it.question, that.question)) {
+					
+					if (that.variants.length !== 0) {
+						console.log('Updated: ' + it.question)
+						
+						if (it.variants.length === 0) {
+							that.answer = it.answer
+							that.variants = []
+						} else {
+							it.variants.forEach(variant => that.variants.push(variant))
+						}
+					}
+
+					found = true;
+					break;
+				}
+			}
+
+			if (!found) {
+				console.log('Added: ' + it.question)
+				tasksTo.push(it)
+			}
+		}
+
+		tasksTo.sort((a, b) => a.variants.length - b.variants.length)
+		return tasksTo
+	}
+
+	function justDoAll(old) {
+		const merged = mergeTasks(getTasks(), old)
+		console.log(JSON.stringify(merged))
+		return merged
+	}
+
+	const Debug = {
+		label(target) {
+			labelCorrect(target, 'Correct');
+			labelSeries(target, 'Series');
+			labelHasMistakes(target, 'Has mistakes / No answers (');
+			labelWrong(target, 'No info (');
+		},
+
+		types() {
+			for (let it of getTaskBlocks()) {
+				const type = getTaskBlockType(it);
+				labelSeries(it, type);
+			};
+		},
+
+		self() {
+			const merged = justDoAll([])
+			labelAll(merged)
+		},
+
+		auto(tasks) {
+			const merged = justDoAll(tasks)
+			labelAll(merged)
+			// return JSON.stringify(merged)
+		}
+	}
+	
+	return {
+		isAnswerAvailable: isAnswerAvailable,
+		areEqualQuestions: areEqualQuestions,
+		labelHasMistakes: labelHasMistakes,
+		getTaskBlocks: getTaskBlocks,
+		formulationOf: formulationOf,
+		labelVariant: labelVariant,
+		labelCorrect: labelCorrect,
+		labelSeries: labelSeries,
+		labelWrong: labelWrong,
+		headerOf: headerOf,
+		labelAll: labelAll,
+		bubble: bubble,
+
+		getTaskBlockType: getTaskBlockType,
+		mergeTasks: mergeTasks,
+		justDoAll: justDoAll,
+		isCorrect: isCorrect,
+		getTasks: getTasks,
+
+		Debug: Debug
+	};
+})();
