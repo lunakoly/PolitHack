@@ -30,10 +30,11 @@ const PolitHack = (function() {
 		target.innerHTML += `<p>Вариант ${n}</p>`
 	}
 
-	const QUESTION_MASK = /[^а-яА-ЯёЁ0-9]/g;
+	const QUESTION_MASK = /[^а-яА-ЯёЁ0-9a-zA-Z]/g;
 
 	function areEqualQuestions(question1, question2) {
-		return question1.replace(QUESTION_MASK, '') === question2.replace(QUESTION_MASK, '');
+		return question2.replace(QUESTION_MASK, '').toLowerCase()
+				.startsWith(question1.replace(QUESTION_MASK, '').toLowerCase())
 	}
 
 	function getTaskBlocks() {
@@ -55,8 +56,12 @@ const PolitHack = (function() {
 		return text + ' ';
 	}
 
+	function shorten(text) {
+		return text.replace(/\s+/g, ' ').trim();
+	}
+
 	function formulationOf(taskBlock) {
-		return textOf(taskBlock.querySelector('.formulation')).trim();
+		return shorten(textOf(taskBlock.querySelector('.formulation')));
 	}
 
 	function headerOf(taskBlock) {
@@ -242,10 +247,10 @@ const PolitHack = (function() {
 				}
 			}
 
-			tasks.push(task)
+			tasks.push(task);
 		};
 
-		return tasks
+		return tasks;
 	}
 
 	function mergeTasks(tasksFrom, tasksTo) {
@@ -272,19 +277,35 @@ const PolitHack = (function() {
 			}
 
 			if (!found) {
-				console.log('Added: ' + it.question)
-				tasksTo.push(it)
+				console.log('Added: ' + it.question);
+				tasksTo.push(it);
 			}
 		}
 
-		tasksTo.sort((a, b) => a.variants.length - b.variants.length)
-		return tasksTo
+		tasksTo.sort((a, b) => a.variants.length - b.variants.length);
+		return tasksTo;
 	}
 
 	function justDoAll(old) {
-		const merged = mergeTasks(getTasks(), old)
-		console.log(JSON.stringify(merged))
-		return merged
+		const merged = mergeTasks(getTasks(), old);
+		console.log(JSON.stringify(merged));
+		return merged;
+	}
+
+	function validateBase(tasks) {
+		for (let task of tasks) {
+			task.question = shorten(task.question);
+
+			for (let it = 0; it < task.answer.length; it++)
+				task.answer[it] = shorten(task.answer[it]);
+
+			for (let it = 0; it < task.variants.length; it++)
+				for (let that = 0; that < task.variants[it].length; that++)
+					task.variants[it][that] = shorten(task.variants[it][that]);
+		}
+
+		tasks.sort((a, b) => a.variants.length - b.variants.length);
+		return JSON.stringify(tasks);
 	}
 
 	const Debug = {
@@ -310,7 +331,17 @@ const PolitHack = (function() {
 		auto(tasks) {
 			const merged = justDoAll(tasks)
 			labelAll(merged)
-			// return JSON.stringify(merged)
+		},
+
+		formulateAll() {
+			for (let it of getTaskBlocks()) {
+				const formulation = formulationOf(it);
+				const betterFormulation = formulation.replace(/\s+/g, ' ').trim();
+				it.innerHTML += '<p>Old Formulation:</p>'
+				labelCorrect(it, formulation);
+				it.innerHTML += '<p>New Formulation:</p>'
+				labelSeries(it, betterFormulation);
+			}
 		}
 	}
 	
@@ -333,6 +364,8 @@ const PolitHack = (function() {
 		justDoAll: justDoAll,
 		isCorrect: isCorrect,
 		getTasks: getTasks,
+
+		validateBase: validateBase,
 
 		Debug: Debug
 	};
