@@ -166,7 +166,7 @@ const PolitHack = (function() {
 
 				for (let each of rows)
 					if (each.firstElementChild.checked)
-						answer.push(each.innerText);
+						answer.push(shorten(each.innerText));
 
 			} else if (type === TASK_BLOCK_TYPE.DROPDOWN) {
 				const tbody = it.querySelector('.answer').firstElementChild;
@@ -176,7 +176,7 @@ const PolitHack = (function() {
 					const text = each.querySelector('.text').innerText;
 					const select = each.querySelector('.select');
 					const value = select.children[select.selectedIndex].innerText;
-					answer.push(text + ' - ' + value);
+					answer.push(shorten(text + ' - ' + value));
 				}
 
 			} else if (type === TASK_BLOCK_TYPE.TYPEIN) {
@@ -186,9 +186,9 @@ const PolitHack = (function() {
 					const input = sub.children[1];
 
 					if (input.tagName === 'SELECT')
-						answer.push(input.children[input.selectedIndex].innerText);
+						answer.push(shorten(input.children[input.selectedIndex].innerText));
 					else
-						answer.push(input.value);
+						answer.push(shorten(input.value));
 				}
 
 			} else if (type === TASK_BLOCK_TYPE.AB) {
@@ -196,8 +196,8 @@ const PolitHack = (function() {
 				const qtext = it.querySelector('.qtext');
 				const ul = qtext.querySelector('ul');
 
-				const A = ul.children[0].textContent;
-				const B = ul.children[1].textContent;
+				const A = shorten(ul.children[0].textContent);
+				const B = shorten(ul.children[1].textContent);
 
 				for (let each of rows) {
 					const rowContents = each.children;

@@ -30,10 +30,11 @@ const PolitHack = (function() {
 		target.innerHTML += `<p>Вариант ${n}</p>`
 	}
 
-	const QUESTION_MASK = /[^а-яА-ЯёЁ0-9]/g;
+	const QUESTION_MASK = /[^а-яА-ЯёЁ0-9a-zA-Z]/g;
 
 	function areEqualQuestions(question1, question2) {
-		return question1.replace(QUESTION_MASK, '') === question2.replace(QUESTION_MASK, '');
+		return question2.replace(QUESTION_MASK, '').toLowerCase()
+				.startsWith(question1.replace(QUESTION_MASK, '').toLowerCase())
 	}
 
 	function getTaskBlocks() {
@@ -55,8 +56,12 @@ const PolitHack = (function() {
 		return text + ' ';
 	}
 
+	function shorten(text) {
+		return text.replace(/\s+/g, ' ').trim();
+	}
+
 	function formulationOf(taskBlock) {
-		return textOf(taskBlock.querySelector('.formulation')).trim();
+		return shorten(textOf(taskBlock.querySelector('.formulation')));
 	}
 
 	function headerOf(taskBlock) {
