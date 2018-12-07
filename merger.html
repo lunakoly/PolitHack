@@ -1,0 +1,70 @@
+<html>
+<body>
+
+<script>	
+/*
+	Takes JSON arrays from two sources and merges them, deleting duplicates. 
+  Can also remove duplicates within one branch if the same url is written.
+*/
+
+
+	const branch_a_url = 'https://raw.githubusercontent.com/lunakoly/PolitHack/master/polit.json';
+	const branch_b_url = 'https://raw.githubusercontent.com/lunakoly/PolitHack/debug/polit.json';
+
+
+	// here will be stored objects from JSON
+	var branch_a; 
+	var branch_b;
+	
+	
+	const QUESTION_MASK = /[^а-яА-ЯёЁ0-9a-zA-Z]/g;
+
+	function areEqualQuestions(question1, question2) {
+		return question2.replace(QUESTION_MASK, '').toLowerCase()
+				.startsWith(question1.replace(QUESTION_MASK, '').toLowerCase())
+	}
+
+	function foo() {
+		// waits for both to be loaded
+		if (branch_a == undefined || branch_b == undefined) return;
+		
+		console.log(branch_a.length)
+		console.log(branch_b.length)
+
+		let tasks = branch_a.concat(branch_b);
+		
+		let result = [tasks[0]]; 
+
+		for (i = 1; i < tasks.length; i++) {
+			let flag = false; // if tasks[i] has already been added
+			
+			for (j = 0; j < i; j++) {
+				let a = tasks[i]['question'];
+				let b = tasks[j]['question'];
+				
+				if (areEqualQuestions(a, b)) { 
+					flag = true;
+					break;
+				}
+			}
+			
+			if (!flag) result.push(tasks[i]);
+		}
+		
+		document.write(JSON.stringify(result));
+	}
+
+
+fetch(branch_a_url)
+	.then(res => res.json())
+	.then(tasks => {branch_a = tasks; foo()})
+	.catch(err => console.error(err));
+fetch(branch_b_url)
+	.then(res => res.json())
+	.then(tasks => {branch_b = tasks; foo()})
+	.catch(err => console.error(err));
+
+
+</script>
+</body>
+</html>
